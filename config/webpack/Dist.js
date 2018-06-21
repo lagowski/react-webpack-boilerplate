@@ -1,0 +1,97 @@
+'use strict';
+
+/**
+ * Dist configuration. Used to build the
+ * final output when running npm run dist.
+ */
+const webpack = require('webpack');
+const WebpackBaseConfig = require('./Base');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+
+const path = require('path');
+const ROOT = path.resolve(__dirname, '../..');
+function root(args) {
+  args = Array.prototype.slice.call(arguments, 0);
+  return path.join.apply(path, [ROOT].concat(args));
+}
+
+class WebpackDistConfig extends WebpackBaseConfig {
+
+  constructor() {
+    super();
+    this.config = {
+      cache: false,
+      devtool: 'source-map',
+      entry: [
+        './index.js'
+      ],
+      output: {
+        path: root('dist'),
+        publicPath: '/',
+        filename: 'assets/app.js',
+        chunkFilename: 'assets/[id].[hash].chunk.js'
+      },
+      mode: 'production',
+      plugins: [
+        new webpack.EnvironmentPlugin({
+          NODE_ENV: 'production', // use 'production' unless process.env.NODE_ENV is defined
+          DEBUG: true,
+          REACT_APP_API_URL: 'http://api.optimifilms.com:5000',
+        }),
+        // new webpack.DefinePlugin({
+        //   NODE_ENV: 'production', // use 'production' unless process.env.NODE_ENV is defined
+        //   DEBUG: false,
+        //   REACT_APP_API_URL: 'http://api.optimifilms.com:5000',
+        //   REACT_APP_AUTH_CALLBACK_URL: 'http://app.optimifilms.com/callback',
+        //   REACT_APP_AUTH_CLIENT_ID: 'hZ1CWEvzVZbCmofJWPM77bupPTUIRApZ'
+        //
+        // }),
+        new webpack.optimize.AggressiveMergingPlugin(),
+        new webpack.NoEmitOnErrorsPlugin(),
+        new webpack.ProvidePlugin({
+          $: "jquery",
+          jQuery: "jquery",
+          "window.jQuery": "jquery"
+        }),
+        new CopyWebpackPlugin([
+          {from: root('src/assets/img'), to: root('dist/assets/img') },
+          {from: root('public/index.html'), to: root('dist/') },
+          {from: root('public/favicon.ico'), to: root('dist/') }
+         ]),
+      ]
+    };
+
+    // Deactivate hot-reloading if we run dist build on the dev server
+    this.config.devServer.hot = false;
+
+    this.config.module.rules = this.config.module.rules.concat([
+      {
+        test: /^.((?!cssmodule).)*\.(sass|scss)$/,
+        loaders: [
+          { loader: 'style-loader' },
+          { loader: 'css-loader' },
+          { loader: 'postcss-loader' },
+          { loader: 'sass-loader' }
+        ]
+      }, {
+        test: /^.((?!cssmodule).)*\.less$/,
+        loaders: [
+          { loader: 'style-loader' },
+          { loader: 'css-loader' },
+          { loader: 'postcss-loader' },
+          { loader: 'less-loader' }
+        ]
+      }
+    ])
+  }
+
+  /**
+   * Get the environment name
+   * @return {String} The current environment
+   */
+  get env() {
+    return 'dist';
+  }
+}
+
+module.exports = WebpackDistConfig;
